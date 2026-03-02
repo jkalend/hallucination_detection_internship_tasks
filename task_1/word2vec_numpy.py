@@ -54,9 +54,9 @@ class Word2VecSGNS:
         grad_v_w = grad_z_pos * u_pos + np.dot(grad_z_negs, u_negs)
         
         # Update weights
-        self.W1[target_idx] -= self.lr * grad_v_w
-        self.W2[context_idx] -= self.lr * grad_u_pos
-        self.W2[negative_indices] -= self.lr * grad_u_negs
+        np.add.at(self.W1, target_idx, -self.lr * grad_v_w)
+        np.add.at(self.W2, context_idx, -self.lr * grad_u_pos)
+        np.add.at(self.W2, negative_indices, -self.lr * grad_u_negs)
         
         return loss
 
@@ -89,20 +89,26 @@ def train():
     
     # Negative sampling distribution
     counts = Counter(words)
-    total_counts = sum(counts.values())
     probs = np.array([counts[id_to_word[i]] for i in range(vocab_size)])
     probs = np.power(probs, 0.75)
     probs /= np.sum(probs)
     
     model = Word2VecSGNS(vocab_size, embedding_dim=10, learning_rate=0.05, n_negs=5)
     
+    all_ids = np.arange(vocab_size)
     epochs = 100
     for epoch in range(epochs):
         total_loss = 0
         count = 0
         for target, context in get_batches(words, word_to_id):
             # Sample negative indices
-            negs = np.random.choice(vocab_size, size=model.n_negs, p=probs)
+            candidate_ids = all_ids[all_ids != context]
+            candidate_probs = probs[candidate_ids]
+            candidate_probs /= candidate_probs.sum()
+            replace = model.n_negs > candidate_ids.size
+            negs = np.random.choice(
+                candidate_ids, size=model.n_negs, replace=replace, p=candidate_probs
+            )
             loss = model.train_step(target, context, negs)
             total_loss += loss
             count += 1
