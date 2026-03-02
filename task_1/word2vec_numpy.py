@@ -117,7 +117,8 @@ def train():
             count += 1
         
         if (epoch + 1) % 10 == 0:
-            print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss/count:.4f}")
+            avg_loss = (total_loss / count) if count else float("nan")
+            print(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.4f}")
 
     # Simple similarity test
     def get_sim(w1, w2):
