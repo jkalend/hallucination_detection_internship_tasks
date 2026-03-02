@@ -103,12 +103,15 @@ def train():
         for target, context in get_batches(words, word_to_id):
             # Sample negative indices
             candidate_ids = all_ids[all_ids != context]
-            candidate_probs = probs[candidate_ids]
-            candidate_probs /= candidate_probs.sum()
-            replace = model.n_negs > candidate_ids.size
-            negs = np.random.choice(
-                candidate_ids, size=model.n_negs, replace=replace, p=candidate_probs
-            )
+            if candidate_ids.size == 0:
+                negs = np.empty(0, dtype=np.int64)
+            else:
+                candidate_probs = probs[candidate_ids]
+                candidate_probs /= candidate_probs.sum()
+                replace = model.n_negs > candidate_ids.size
+                negs = np.random.choice(
+                    candidate_ids, size=model.n_negs, replace=replace, p=candidate_probs
+                )
             loss = model.train_step(target, context, negs)
             total_loss += loss
             count += 1
